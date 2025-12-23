@@ -14,8 +14,10 @@ struct CalendarScreen: View {
                     CalendarHeaderView(
                         monthTitle: monthTitle(for: viewStore.selectedDate),
                         mode: viewStore.mode,
+                        selectedDate: viewStore.selectedDate,
                         onModeChange: { viewStore.send(.modeChanged($0)) },
                         onToday: { viewStore.send(.todayTapped) },
+                        onDateChange: { viewStore.send(.calendarDateChanged($0)) },
                         enabledCategories: viewStore.activeFilters,
                         onToggleCategory: { viewStore.send(.filterToggled($0)) }
                     )

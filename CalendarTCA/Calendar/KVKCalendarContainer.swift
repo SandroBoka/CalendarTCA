@@ -181,10 +181,21 @@ struct KVKCalendarContainer: UIViewRepresentable {
         // ✅ allow day to expand full width
         style.timeline.widthEventViewer = nil
 
+        style.month.colorWeekendDate = style.month.colorDate
+        style.month.colorBackgroundWeekendDate = style.month.colorBackgroundDate
+
         // tighten
         style.timeline.offsetTimeX = 0
         style.timeline.offsetLineLeft = 0
         style.timeline.offsetLineRight = 0
+
+        style.month.scrollDirection = .vertical
+        style.month.isPagingEnabled = true
+        style.month.isScrollEnabled = false
+        style.month.autoSelectionDateWhenScrolling = false
+        style.month.isHiddenSectionHeader = true
+
+        style.month.selectionMode = .single
 
         return style
     }

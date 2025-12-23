@@ -5,12 +5,16 @@ struct CalendarHeaderView: View {
     let monthTitle: String
 
     let mode: CalendarDisplayMode
+    let selectedDate: Date
     let onModeChange: (CalendarDisplayMode) -> Void
 
     let onToday: () -> Void
+    let onDateChange: (Date) -> Void
 
     let enabledCategories: Set<EventCategory>
     let onToggleCategory: (EventCategory) -> Void
+
+    private let calendar = Calendar.gregorianSundayFirst
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -38,6 +42,8 @@ struct CalendarHeaderView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 240)
 
+                Spacer()
+
                 Button("Today", action: onToday)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(Color(uiColor: .systemBlue))
@@ -58,10 +64,57 @@ struct CalendarHeaderView: View {
                 }
                 .padding(.vertical, 2)
             }
+
+            if mode == .day || mode == .week {
+                CalendarHeaderDayRow(
+                    selectedDate: selectedDate,
+                    days: weekDays(for: selectedDate),
+                    onPrevious: { onDateChange(selectedDate.addingDays(-chevronDayCount, calendar: calendar)) },
+                    onNext: { onDateChange(selectedDate.addingDays(chevronDayCount, calendar: calendar)) },
+                    onDayTapped: { onDateChange($0) }
+                )
+            } else if mode == .month {
+                CalendarHeaderMonthRow(
+                    referenceDate: selectedDate,
+                    onPreviousMonth: { onDateChange(previousMonthAnchor(from: selectedDate)) },
+                    onNextMonth: { onDateChange(nextMonthAnchor(from: selectedDate)) }
+                )
+            }
         }
         .padding(16)
         .background(Color(white: 0.96))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func weekDays(for date: Date) -> [Date] {
+        let start = calendar.startOfWeek(containing: date)
+        return (0..<7).map { start.addingDays($0, calendar: calendar) }
+    }
+
+    private func previousMonthAnchor(from date: Date) -> Date {
+        let prev = calendar.date(byAdding: .month, value: -1, to: date) ?? date
+        return firstDayOfMonth(for: prev)
+    }
+
+    private func nextMonthAnchor(from date: Date) -> Date {
+        let next = calendar.date(byAdding: .month, value: 1, to: date) ?? date
+        return firstDayOfMonth(for: next)
+    }
+
+    private func firstDayOfMonth(for date: Date) -> Date {
+        let comps = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: comps).map { calendar.startOfDay(for: $0) } ?? date
+    }
+
+    private var chevronDayCount: Int {
+        switch mode {
+        case .day:
+            1
+        case .week:
+            7
+        case .month:
+            0
+        }
     }
 
     private func pillStyle(for category: EventCategory) -> CategoryPill.Style {
