@@ -197,6 +197,21 @@ struct KVKCalendarContainer: UIViewRepresentable {
 
         style.month.selectionMode = .single
 
+        style.timeline.widthTime = 60   // try 60–80 on iPad
+        style.allDay.titleText = "ALL DAY"
+        style.allDay.backgroundColor = .white
+
+        // Title styling (optional)
+        style.allDay.titleColor = .black
+        style.allDay.fontTitle = .systemFont(ofSize: 10, weight: .semibold)
+        style.allDay.titleAlignment = .left
+
+        // Spacing / padding inside the all-day area
+        style.allDay.offsetHeight = 5
+        style.allDay.offsetWidth = 10
+
+        style.event.textContainerInset = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+
         return style
     }
 

@@ -50,19 +50,23 @@ struct CalendarHeaderView: View {
                     .padding(.leading, 12)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(EventCategory.allCases) { category in
-                        CategoryPill(
-                            title: category.rawValue,
-                            isOn: enabledCategories.contains(category),
-                            style: pillStyle(for: category)
-                        ) {
+            HStack(spacing: 10) {
+                Spacer()
+
+                ForEach(EventCategory.allCases) { category in
+                    CategoryPill(
+                        title: category.rawValue,
+                        isOn: enabledCategories.contains(category),
+                        style: pillStyle(for: category)
+                    ) {
+                        withAnimation(.snappy(duration: 0.2)) {
                             onToggleCategory(category)
                         }
                     }
                 }
                 .padding(.vertical, 2)
+
+                Spacer()
             }
 
             if mode == .day || mode == .week {
