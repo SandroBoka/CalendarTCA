@@ -87,5 +87,5 @@ struct EventPopup: View {
                 .stroke(Color.black.opacity(0.06), lineWidth: 1)
         )
     }
-    
+
 }
