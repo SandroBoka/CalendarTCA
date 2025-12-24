@@ -27,13 +27,16 @@ private extension EventCategory {
     var kvkColor: Event.Color {
         let ui = UIColor(hex: hex) ?? .systemBlue
         let alpha: CGFloat = (self == .closures) ? 1.0 : 0.22
+
         return Event.Color(ui, alpha: alpha)
     }
 
     var kvkTextColor: UIColor {
         switch self {
-        case .closures: return .white
-        default: return UIColor(hex: hex) ?? .label
+        case .closures:
+            .white
+        default:
+            UIColor(hex: hex) ?? .label
         }
     }
 

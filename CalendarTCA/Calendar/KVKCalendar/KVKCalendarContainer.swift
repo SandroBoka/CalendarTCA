@@ -14,10 +14,7 @@ struct KVKCalendarContainer: UIViewRepresentable {
     let events: [DemoEvent]
     let enabledCategories: Set<EventCategory>
 
-    /// Called when visible/selected date changes due to scroll or tap.
     let onCalendarDateChanged: (Date) -> Void
-
-    /// Called when tapping an event (for popup).
     let onEventSelectionChanged: (DemoEvent?, CGRect?) -> Void
 
     // MARK: - HostView (fixes blank Day/Week rendering)
@@ -105,10 +102,11 @@ struct KVKCalendarContainer: UIViewRepresentable {
         let day = Calendar.gregorianSundayFirst.startOfDay(for: selectedDate)
         let dateChangedExternally: Bool = {
             guard let last = context.coordinator.lastAppliedDay else { return true }
+
             return !Calendar.gregorianSundayFirst.isDate(last, inSameDayAs: day)
         }()
 
-        func applyTypeAndDate(animated: Bool, scrollTo: Bool) {
+        func syncKVK(animated: Bool, scrollTo: Bool) {
             context.coordinator.isProgrammaticSync = true
 
             kvk.updateStyle(makeStyle(defaultType: targetType))
@@ -119,7 +117,7 @@ struct KVKCalendarContainer: UIViewRepresentable {
 
             context.coordinator.lastAppliedDay = day
 
-            // IMPORTANT: Day/Week grid often won't show without these:
+            // Day/Week grid often won't show without these:
             kvk.reloadData()
             DispatchQueue.main.async {
                 host.forceReloadFrameNow()
@@ -127,34 +125,35 @@ struct KVKCalendarContainer: UIViewRepresentable {
             }
         }
 
-        // 1) Today jump (first open + Today button)
+        // 1) Today jump (first open or Today button)
         if shouldJumpToToday {
-            applyTypeAndDate(animated: true, scrollTo: true)
+            syncKVK(animated: true, scrollTo: true)
             DispatchQueue.main.async { onDidFinishJumpToToday() }
+
             return
         }
 
-        // 2) Switching tabs: must redraw Day/Week grid immediately
+        // 2) Switching tabs, must redraw Day/Week grid
         if typeChanged {
-            applyTypeAndDate(animated: false, scrollTo: false)
+            syncKVK(animated: false, scrollTo: false)
+
             return
         }
 
-        // 3) If selectedDate changed externally (not from KVK scroll), sync it
-        // This will not fire for user scrolling inside KVK because we update lastAppliedDay in delegate callbacks.
+        // 3) If selectedDate changed externally (not from KVK scroll), we need to sync it
         if dateChangedExternally {
-            applyTypeAndDate(animated: false, scrollTo: false)
+            syncKVK(animated: false, scrollTo: false)
+
             return
         }
 
-        // 4) Filters changed -> reload events only (avoid frame reload to preserve scroll position)
+        // 4) Filters changed, reload events only (avoid frame reload to preserve scroll position)
         if dataChanged {
             kvk.reloadData()
         }
     }
 
     // MARK: - Helpers
-
     private func calendarType(for mode: CalendarDisplayMode) -> CalendarType {
         switch mode {
         case .day: return .day
@@ -165,68 +164,89 @@ struct KVKCalendarContainer: UIViewRepresentable {
 
     private func makeStyle(defaultType: CalendarType) -> Style {
         var style = Style()
-        style.startWeekDay = .sunday
+
+        applyCoreConfig(to: &style, defaultType: defaultType)
+        applyHeaderConfig(to: &style)
+        applyMonthConfig(to: &style)
+        applyTimelineLayout(to: &style)
+        applyAllDayConfig(to: &style)
+        applyEventTextInsets(to: &style)
+
+        return style
+    }
+
+    private func applyCoreConfig(to style: inout Style, defaultType: CalendarType) {
         style.calendar = Calendar.gregorianSundayFirst
+        style.startWeekDay = .sunday
         style.timeSystem = .twentyFour
-
-        // We use SwiftUI header
-        style.headerScroll.isHidden = true
-        style.month.isHiddenTitleHeader = true
-
         style.defaultType = defaultType
 
         style.event.states = []
         style.timeline.isEnabledCreateNewEvent = false
+    }
 
-        // ✅ allow day to expand full width
-        style.timeline.widthEventViewer = nil
+    private func applyHeaderConfig(to style: inout Style) {
+        // We show our header.
+        style.headerScroll.isHidden = true
+        style.month.isHiddenTitleHeader = true
+    }
 
+    private func applyMonthConfig(to style: inout Style) {
         style.month.colorWeekendDate = style.month.colorDate
         style.month.colorBackgroundWeekendDate = style.month.colorBackgroundDate
 
-        // tighten
-        style.timeline.offsetTimeX = 0
-        style.timeline.offsetLineLeft = 0
-        style.timeline.offsetLineRight = 0
-
+        // Scroll disabled to remove empty lines
+        // TODO: this needs further investigation
         style.month.scrollDirection = .vertical
         style.month.isPagingEnabled = true
         style.month.isScrollEnabled = false
         style.month.autoSelectionDateWhenScrolling = false
         style.month.isHiddenSectionHeader = true
-
         style.month.selectionMode = .single
+    }
 
-        style.timeline.widthTime = 60   // try 60–80 on iPad
+    private func applyTimelineLayout(to style: inout Style) {
+        // whithout this KVK calendar defaults to fixed width
+        style.timeline.widthEventViewer = nil
+
+        // Removed default paddings
+        style.timeline.offsetTimeX = 0
+        style.timeline.offsetLineLeft = 0
+        style.timeline.offsetLineRight = 0
+
+        style.timeline.widthTime = 60
+    }
+
+    private func applyAllDayConfig(to style: inout Style) {
         style.allDay.titleText = "ALL DAY"
         style.allDay.backgroundColor = .white
 
-        // Title styling (optional)
         style.allDay.titleColor = .black
         style.allDay.fontTitle = .systemFont(ofSize: 10, weight: .semibold)
         style.allDay.titleAlignment = .left
 
-        // Spacing / padding inside the all-day area
         style.allDay.offsetHeight = 5
         style.allDay.offsetWidth = 10
+    }
 
+    private func applyEventTextInsets(to style: inout Style) {
         style.event.textContainerInset = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-
-        return style
     }
 
     private func signature(events: [DemoEvent], enabled: Set<EventCategory>) -> Int {
         var hasher = Hasher()
+
         hasher.combine(events.count)
-        for e in events { hasher.combine(e.id) }
-        for c in enabled.sorted(by: { $0.rawValue < $1.rawValue }) {
-            hasher.combine(c.rawValue)
+        for event in events { hasher.combine(event.id) }
+
+        for category in enabled.sorted(by: { $0.rawValue < $1.rawValue }) {
+            hasher.combine(category.rawValue)
         }
+
         return hasher.finalize()
     }
 
     // MARK: - Coordinator
-
     final class Coordinator: NSObject, CalendarDataSource, CalendarDelegate {
 
         var parent: KVKCalendarContainer

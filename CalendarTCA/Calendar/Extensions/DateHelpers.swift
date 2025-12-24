@@ -3,17 +3,20 @@ import Foundation
 extension Calendar {
     
     static var gregorianSundayFirst: Calendar {
-        var cal = Calendar(identifier: .gregorian)
-        cal.locale = Locale.current
-        cal.timeZone = TimeZone.current
-        cal.firstWeekday = 1 // Sunday
-        return cal
+        var calendar = Calendar(identifier: .gregorian)
+
+        calendar.locale = Locale.current
+        calendar.timeZone = TimeZone.current
+        calendar.firstWeekday = 1 // Sunday
+
+        return calendar
     }
     
     func startOfWeek(containing date: Date) -> Date {
         let startOfDay = startOfDay(for: date)
         let weekday = component(.weekday, from: startOfDay) // 1 = Sunday
         let daysToSubtract = (weekday - firstWeekday + 7) % 7
+
         return self.date(byAdding: .day, value: -daysToSubtract, to: startOfDay) ?? startOfDay
     }
 

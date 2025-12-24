@@ -7,8 +7,8 @@ struct DemoApp: App {
     var body: some Scene {
         WindowGroup {
             CalendarScreen(
-                store: Store(initialState: CalendarFeature.State()) {
-                    CalendarFeature()
+                store: Store(initialState: CalendarDomain.State()) {
+                    CalendarDomain()
                 }
             )
         }
